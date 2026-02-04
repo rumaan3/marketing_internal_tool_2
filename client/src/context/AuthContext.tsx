@@ -56,11 +56,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }, []);
 
     const login = async (email: string, password: string) => {
-        const response = await api.post("/auth/login", { email, password });
-        const { token: newToken, user: userData } = response.data;
-        localStorage.setItem("token", newToken);
-        setToken(newToken);
-        setUser(userData);
+        try {
+            const response = await api.post("/auth/login", { email, password });
+            const { token: newToken, user: userData } = response.data;
+            localStorage.setItem("token", newToken);
+            setToken(newToken);
+            setUser(userData);
+        } catch (error: any) {
+            const message = error.response?.data?.message || "Login failed. Please try again.";
+            throw new Error(message);
+        }
     };
 
     const logout = () => {
