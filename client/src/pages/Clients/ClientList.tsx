@@ -12,6 +12,8 @@ import Button from "../../components/ui/button/Button";
 import { Modal } from "../../components/ui/modal";
 import Input from "../../components/form/input/InputField";
 import Label from "../../components/form/Label";
+import Select from "../../components/form/Select";
+import Alert from "../../components/ui/alert/Alert";
 import PageMeta from "../../components/common/PageMeta";
 
 interface Client {
@@ -82,9 +84,16 @@ export default function ClientList() {
         fetchClients(newPage, pagination.limit);
     };
 
-    const handleShowMore = () => {
-        const newLimit = Math.min(pagination.limit + 10, 50);
-        fetchClients(pagination.page, newLimit);
+
+
+    const handleJumpToPage = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            const val = parseInt(e.currentTarget.value);
+            if (val >= 1 && val <= pagination.pages) {
+                handlePageChange(val);
+                e.currentTarget.value = "";
+            }
+        }
     };
 
     const handleToggleActive = async (clientId: string) => {
@@ -163,17 +172,13 @@ export default function ClientList() {
                             />
                         </div>
                         {/* Filter */}
-                        <select
-                            value={filterActive}
-                            onChange={(e) => setFilterActive(e.target.value)}
-                            className="h-10 rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 outline-none focus:border-brand-500 dark:border-gray-700 dark:text-white"
-                        >
-                            {filterOptions.map((opt) => (
-                                <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                </option>
-                            ))}
-                        </select>
+                        {/* Filter */}
+                        <Select
+                            className="w-48"
+                            options={filterOptions}
+                            onChange={(value) => setFilterActive(value)}
+                            defaultValue={filterActive}
+                        />
                         {/* Add Button */}
                         <Button size="sm" onClick={openAddModal}>
                             Add Client
@@ -268,11 +273,17 @@ export default function ClientList() {
                         Showing {clients.length} of {pagination.total} results
                     </div>
                     <div className="flex items-center gap-2">
-                        {pagination.limit < 50 && pagination.total > pagination.limit && (
-                            <Button variant="outline" size="sm" onClick={handleShowMore}>
-                                Show More
-                            </Button>
-                        )}
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500 dark:text-gray-400">Go to page:</span>
+                            <input
+                                type="number"
+                                min={1}
+                                max={pagination.pages}
+                                placeholder="#"
+                                className="w-16 rounded-lg border border-gray-300 bg-transparent px-3 py-1.5 text-sm outline-none focus:border-brand-500 dark:border-gray-700 dark:text-gray-300"
+                                onKeyDown={handleJumpToPage}
+                            />
+                        </div>
                         {pagination.pages > 1 && (
                             <div className="flex items-center gap-1">
                                 <Button
@@ -308,9 +319,7 @@ export default function ClientList() {
                     </h4>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {formError && (
-                            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
-                                {formError}
-                            </div>
+                            <Alert variant="error" title="Error" message={formError} />
                         )}
                         <div>
                             <Label>Name *</Label>

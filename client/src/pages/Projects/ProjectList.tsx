@@ -10,9 +10,12 @@ import {
 import Badge from "../../components/ui/badge/Badge";
 import Button from "../../components/ui/button/Button";
 import { Modal } from "../../components/ui/modal";
+import { Dropdown } from "../../components/ui/dropdown/Dropdown";
+import { DropdownItem } from "../../components/ui/dropdown/DropdownItem";
 import Input from "../../components/form/input/InputField";
 import Label from "../../components/form/Label";
 import Select from "../../components/form/Select";
+import Alert from "../../components/ui/alert/Alert";
 import PageMeta from "../../components/common/PageMeta";
 
 interface Client {
@@ -57,6 +60,7 @@ export default function ProjectList() {
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
     const [editingProject, setEditingProject] = useState<Project | null>(null);
     const [formData, setFormData] = useState({
         name: "",
@@ -111,9 +115,14 @@ export default function ProjectList() {
         fetchProjects(newPage, pagination.limit);
     };
 
-    const handleShowMore = () => {
-        const newLimit = Math.min(pagination.limit + 10, 50);
-        fetchProjects(pagination.page, newLimit);
+    const handleJumpToPage = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            const val = parseInt(e.currentTarget.value);
+            if (val >= 1 && val <= pagination.pages) {
+                handlePageChange(val);
+                e.currentTarget.value = "";
+            }
+        }
     };
 
     const handleToggleActive = async (projectId: string) => {
@@ -230,42 +239,27 @@ export default function ProjectList() {
                             className="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 outline-none focus:border-brand-500 dark:border-gray-700 dark:text-white sm:w-40"
                         />
                         {/* Client Filter */}
-                        <select
-                            value={filterClient}
-                            onChange={(e) => setFilterClient(e.target.value)}
-                            className="h-10 rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 outline-none focus:border-brand-500 dark:border-gray-700 dark:text-white"
-                        >
-                            <option value="">All Clients</option>
-                            {clients.map((client) => (
-                                <option key={client._id} value={client._id}>
-                                    {client.name}
-                                </option>
-                            ))}
-                        </select>
+                        <Select
+                            className="w-48"
+                            placeholder="Select Client"
+                            options={[{ value: "", label: "All Clients" }, ...clients.map(c => ({ value: c._id, label: c.name }))]}
+                            onChange={(value) => setFilterClient(value)}
+                            defaultValue={filterClient}
+                        />
                         {/* Status Filter */}
-                        <select
-                            value={filterStatus}
-                            onChange={(e) => setFilterStatus(e.target.value)}
-                            className="h-10 rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 outline-none focus:border-brand-500 dark:border-gray-700 dark:text-white"
-                        >
-                            {filterStatusOptions.map((opt) => (
-                                <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                </option>
-                            ))}
-                        </select>
+                        <Select
+                            className="w-48"
+                            options={filterStatusOptions}
+                            onChange={(value) => setFilterStatus(value)}
+                            defaultValue={filterStatus}
+                        />
                         {/* Active Filter */}
-                        <select
-                            value={filterActive}
-                            onChange={(e) => setFilterActive(e.target.value)}
-                            className="h-10 rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 outline-none focus:border-brand-500 dark:border-gray-700 dark:text-white"
-                        >
-                            {filterActiveOptions.map((opt) => (
-                                <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                </option>
-                            ))}
-                        </select>
+                        <Select
+                            className="w-48"
+                            options={filterActiveOptions}
+                            onChange={(value) => setFilterActive(value)}
+                            defaultValue={filterActive}
+                        />
                         {/* Add Button */}
                         <Button size="sm" onClick={openAddModal}>
                             Add Project
@@ -365,11 +359,17 @@ export default function ProjectList() {
                         Showing {projects.length} of {pagination.total} results
                     </div>
                     <div className="flex items-center gap-2">
-                        {pagination.limit < 50 && pagination.total > pagination.limit && (
-                            <Button variant="outline" size="sm" onClick={handleShowMore}>
-                                Show More
-                            </Button>
-                        )}
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500 dark:text-gray-400">Go to page:</span>
+                            <input
+                                type="number"
+                                min={1}
+                                max={pagination.pages}
+                                placeholder="#"
+                                className="w-16 rounded-lg border border-gray-300 bg-transparent px-3 py-1.5 text-sm outline-none focus:border-brand-500 dark:border-gray-700 dark:text-gray-300"
+                                onKeyDown={handleJumpToPage}
+                            />
+                        </div>
                         {pagination.pages > 1 && (
                             <div className="flex items-center gap-1">
                                 <Button
@@ -398,16 +398,18 @@ export default function ProjectList() {
             </div>
 
             {/* Add/Edit Modal */}
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                className="max-w-lg w-full mx-4"
+            >
                 <div className="p-6">
                     <h4 className="mb-6 text-lg font-semibold text-gray-800 dark:text-white">
                         {editingProject ? "Edit Project" : "Add Project"}
                     </h4>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {formError && (
-                            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
-                                {formError}
-                            </div>
+                            <Alert variant="error" title="Error" message={formError} />
                         )}
                         <div>
                             <Label>Project Name *</Label>
@@ -427,20 +429,56 @@ export default function ProjectList() {
                                 placeholder="Enter description"
                             />
                         </div>
-                        <div>
+                        <div className="relative">
                             <Label>Client *</Label>
-                            <select
-                                value={formData.client}
-                                onChange={(e) => setFormData({ ...formData, client: e.target.value })}
-                                className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                            >
-                                <option value="">Select a client</option>
-                                {clients.map((client) => (
-                                    <option key={client._id} value={client._id}>
-                                        {client.name} {client.company ? `(${client.company})` : ""}
-                                    </option>
-                                ))}
-                            </select>
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
+                                    className="flex w-full items-center justify-between rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white dropdown-toggle"
+                                >
+                                    <span className={!formData.client ? "text-gray-400" : ""}>
+                                        {formData.client
+                                            ? clients.find((c) => c._id === formData.client)?.name || "Select a client"
+                                            : "Select a client"}
+                                    </span>
+                                    <svg
+                                        className={`h-5 w-5 text-gray-500 transition-transform ${isClientDropdownOpen ? "rotate-180" : ""}`}
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+
+                                <Dropdown
+                                    isOpen={isClientDropdownOpen}
+                                    onClose={() => setIsClientDropdownOpen(false)}
+                                    className="left-0 w-full"
+                                >
+                                    <div className="max-h-60 overflow-y-auto custom-scrollbar p-1">
+                                        {clients.map((client) => (
+                                            <DropdownItem
+                                                key={client._id}
+                                                onClick={() => {
+                                                    setFormData({ ...formData, client: client._id });
+                                                    setIsClientDropdownOpen(false);
+                                                }}
+                                                className={`flex flex-col items-start ${formData.client === client._id ? "bg-gray-100 dark:bg-gray-800" : ""}`}
+                                            >
+                                                <span className="font-medium">{client.name}</span>
+                                                {client.company && (
+                                                    <span className="text-xs text-gray-500">{client.company}</span>
+                                                )}
+                                            </DropdownItem>
+                                        ))}
+                                        {clients.length === 0 && (
+                                            <div className="px-4 py-2 text-sm text-gray-500">No clients found</div>
+                                        )}
+                                    </div>
+                                </Dropdown>
+                            </div>
                         </div>
                         <div>
                             <Label>Status</Label>
