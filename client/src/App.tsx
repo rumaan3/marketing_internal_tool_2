@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
+import { BrowserRouter as Router, Routes, Route } from "react-router";
 import SignIn from "./pages/AuthPages/SignIn";
 import NotFound from "./pages/OtherPage/NotFound";
 import AppLayout from "./layout/AppLayout";
@@ -7,6 +7,9 @@ import Home from "./pages/Dashboard/Home";
 import StaffList from "./pages/Staff/StaffList";
 import ClientList from "./pages/Clients/ClientList";
 import ProjectList from "./pages/Projects/ProjectList";
+import SocialMediaList from "./pages/SocialMedia/SocialMediaList";
+import CalendarList from "./pages/Calendars/CalendarList";
+import CalendarView from "./pages/Calendars/CalendarView";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -26,6 +29,9 @@ export default function App() {
                             <Route path="/staff" element={<StaffList />} />
                             <Route path="/clients" element={<ClientList />} />
                             <Route path="/projects" element={<ProjectList />} />
+                            <Route path="/social-media" element={<SocialMediaList />} />
+                            <Route path="/calendars" element={<CalendarList />} />
+                            <Route path="/calendars/:id" element={<CalendarView />} />
                         </Route>
 
                         {/* Fallback Route */}

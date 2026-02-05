@@ -32,4 +32,6 @@ yarn-error.log*
 # template/
 
 # Coverage
-coverage/
+
+# Uploads
+server/uploads/

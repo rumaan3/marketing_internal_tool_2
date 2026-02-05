@@ -2,12 +2,20 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import clientRoutes from "./routes/clients.js";
 import projectRoutes from "./routes/projects.js";
+import socialMediaRoutes from "./routes/socialMedia.js";
+import calendarRoutes from "./routes/calendars.js";
+import uploadRoutes from "./routes/upload.js"; // Import upload routes
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -15,11 +23,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Static file serving for uploads
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/projects", projectRoutes);
+app.use("/api/social-media", socialMediaRoutes);
+app.use("/api/calendars", calendarRoutes);
+app.use("/api/upload", uploadRoutes); // Use upload routes
 
 // Health check
 app.get("/api/health", (req, res) => {

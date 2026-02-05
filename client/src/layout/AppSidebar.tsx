@@ -9,6 +9,8 @@ import {
   HorizontaLDots,
   TableIcon,
   UserCircleIcon,
+  CalenderIcon,
+  PaperPlaneIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 
@@ -39,6 +41,16 @@ const navItems: NavItem[] = [
     icon: <BoxCubeIcon />,
     name: "Projects",
     path: "/projects",
+  },
+  {
+    icon: <PaperPlaneIcon />,
+    name: "Social Media",
+    path: "/social-media",
+  },
+  {
+    icon: <CalenderIcon />,
+    name: "Calendars",
+    path: "/calendars",
   },
 ];
 

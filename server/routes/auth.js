@@ -25,13 +25,25 @@ router.post("/login", async (req, res) => {
                 .json({ message: "Please provide email and password" });
         }
 
+        console.log(`Login attempt for: ${email}`);
+
         const user = await User.findOne({ email }).select("+password");
 
-        if (!user || !(await user.comparePassword(password))) {
+        if (!user) {
+            console.log("User not found");
             return res.status(401).json({ message: "Invalid email or password" });
         }
 
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            console.log("Password mismatch");
+            return res.status(401).json({ message: "Invalid email or password" });
+        }
+
+        console.log("Login successful, generating token");
+
         if (!user.isActive) {
+            console.log("User inactive");
             return res.status(401).json({ message: "Account is deactivated" });
         }
 
@@ -47,6 +59,7 @@ router.post("/login", async (req, res) => {
             },
         });
     } catch (error) {
+        console.error("Login Error:", error);
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });
