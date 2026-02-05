@@ -31,9 +31,15 @@ router.get("/", restrictTo("superuser", "admin"), async (req, res) => {
             query.isActive = filterActive === "true";
         }
 
+        // Filter by role if specified
+        if (req.query.role) {
+            query.role = req.query.role;
+        }
+
         const total = await User.countDocuments(query);
         const users = await User.find(query)
             .select("-password")
+            .populate("clientId", "name company")
             .skip(skip)
             .limit(limit)
             .sort({ createdAt: -1 });
@@ -53,21 +59,31 @@ router.get("/", restrictTo("superuser", "admin"), async (req, res) => {
 });
 
 // @route   POST /api/users
-// @desc    Create staff member
-// @access  Private (Superuser only)
-router.post("/", restrictTo("superuser"), async (req, res) => {
+// @desc    Create staff or client user
+// @access  Private (Superuser, Admin)
+router.post("/", restrictTo("superuser", "admin"), async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password, role, clientId } = req.body;
 
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ message: "Email already in use" });
         }
 
-        // Superuser can only create admin or staff
-        const allowedRoles = ["admin", "staff"];
+        // Check if role is allowed based on creator's role
+        const allowedRoles = ["admin", "staff", "client"];
         if (!allowedRoles.includes(role)) {
             return res.status(400).json({ message: "Invalid role" });
+        }
+
+        // Only superuser can create admins
+        if (role === "admin" && req.user.role !== "superuser") {
+            return res.status(403).json({ message: "Only superuser can create admins" });
+        }
+
+        // Client ID is required for client users
+        if (role === "client" && !clientId) {
+            return res.status(400).json({ message: "Client ID is required for client users" });
         }
 
         const user = await User.create({
@@ -75,6 +91,7 @@ router.post("/", restrictTo("superuser"), async (req, res) => {
             email,
             password,
             role,
+            clientId: role === "client" ? clientId : undefined,
         });
 
         res.status(201).json({
@@ -84,6 +101,7 @@ router.post("/", restrictTo("superuser"), async (req, res) => {
                 email: user.email,
                 role: user.role,
                 isActive: user.isActive,
+                clientId: user.clientId,
             },
         });
     } catch (error) {

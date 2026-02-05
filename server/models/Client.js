@@ -34,6 +34,22 @@ const clientSchema = new mongoose.Schema(
             ref: "User",
             required: true,
         },
+        credentials: [
+            {
+                platform: {
+                    type: String,
+                    required: true,
+                },
+                encryptedData: {
+                    type: String,
+                    required: true,
+                },
+                iv: {
+                    type: String,
+                    required: true,
+                },
+            },
+        ],
     },
     {
         timestamps: true,

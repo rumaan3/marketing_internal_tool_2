@@ -27,6 +27,14 @@ const projectSchema = new mongoose.Schema(
         endDate: {
             type: Date,
         },
+        icon: {
+            type: String, // Path to local file
+            default: null,
+        },
+        assignedStaff: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+        }],
         isActive: {
             type: Boolean,
             default: true,

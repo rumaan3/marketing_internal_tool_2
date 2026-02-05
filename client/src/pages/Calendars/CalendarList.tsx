@@ -1,14 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
 import api from "../../api/axios";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHeader,
-    TableRow,
-} from "../../components/ui/table";
-import Badge from "../../components/ui/badge/Badge";
 import Button from "../../components/ui/button/Button";
 import { Modal } from "../../components/ui/modal";
 import Input from "../../components/form/input/InputField";
@@ -16,24 +7,39 @@ import Label from "../../components/form/Label";
 import Select from "../../components/form/Select";
 import Alert from "../../components/ui/alert/Alert";
 import PageMeta from "../../components/common/PageMeta";
+import { CalendarCard } from "../../components/calendar/CalendarCard";
+
+interface Client {
+    _id: string;
+    name: string;
+}
 
 interface Project {
     _id: string;
     name: string;
-    status: string;
+    client: { _id: string; name: string } | string; // Handle both populated and ID
 }
 
-interface SocialMediaEntry {
-    _id: string;
-    platform: string;
-    description: string;
-}
+
 
 interface Calendar {
     _id: string;
     name: string;
-    project: Project;
-    socialMediaEntry: SocialMediaEntry;
+    project: {
+        _id: string;
+        name: string;
+        status?: string;
+        icon?: string;
+    };
+    client: {
+        _id: string;
+        name: string;
+    };
+    platform: string;
+    socialMediaEntry?: {
+        platform: string;
+        imageUrl?: string;
+    };
     isActive: boolean;
     createdAt: string;
 }
@@ -46,10 +52,10 @@ interface Pagination {
 }
 
 export default function CalendarList() {
-    const navigate = useNavigate();
     const [calendars, setCalendars] = useState<Calendar[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
-    const [socialMediaEntries, setSocialMediaEntries] = useState<SocialMediaEntry[]>([]);
+
     const [pagination, setPagination] = useState<Pagination>({
         total: 0,
         page: 1,
@@ -62,10 +68,13 @@ export default function CalendarList() {
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editingCalendarId, setEditingCalendarId] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         name: "",
+        client: "",
         project: "",
-        socialMediaEntry: "",
+        platform: "",
     });
     const [formError, setFormError] = useState("");
     const [formLoading, setFormLoading] = useState(false);
@@ -89,6 +98,15 @@ export default function CalendarList() {
         }
     };
 
+    const fetchClients = async () => {
+        try {
+            const response = await api.get("/clients?limit=100&isActive=true");
+            setClients(response.data.clients);
+        } catch (error) {
+            console.error("Error fetching clients:", error);
+        }
+    };
+
     const fetchProjects = async () => {
         try {
             const response = await api.get("/projects?limit=100&isActive=true");
@@ -98,40 +116,40 @@ export default function CalendarList() {
         }
     };
 
-    const fetchSocialMediaEntries = async () => {
-        try {
-            const response = await api.get("/social-media?limit=100&isActive=true");
-            setSocialMediaEntries(response.data.entries);
-        } catch (error) {
-            console.error("Error fetching social media entries:", error);
-        }
-    };
+
 
     useEffect(() => {
         fetchCalendars(pagination.page, pagination.limit);
     }, [search, filterActive]);
 
     useEffect(() => {
+        fetchClients();
         fetchProjects();
-        fetchSocialMediaEntries();
+
     }, []);
 
     const handlePageChange = (newPage: number) => {
         fetchCalendars(newPage, pagination.limit);
     };
 
-    const handleJumpToPage = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "Enter") {
-            const val = parseInt(e.currentTarget.value);
-            if (val >= 1 && val <= pagination.pages) {
-                handlePageChange(val);
-                e.currentTarget.value = "";
-            }
-        }
+    const openModal = () => {
+        setIsEditMode(false);
+        setEditingCalendarId(null);
+        setFormData({ name: "", client: "", project: "", platform: "" });
+        setFormError("");
+        setIsModalOpen(true);
     };
 
-    const openModal = () => {
-        setFormData({ name: "", project: "", socialMediaEntry: "" });
+    const openEditModal = (calendar: Calendar) => {
+        setIsEditMode(true);
+        setEditingCalendarId(calendar._id);
+        setFormData({
+            name: calendar.name,
+            client: calendar.client?._id || "",
+            project: calendar.project?._id || "",
+            platform: calendar.platform || "",
+
+        });
         setFormError("");
         setIsModalOpen(true);
     };
@@ -142,27 +160,30 @@ export default function CalendarList() {
         setFormLoading(true);
 
         try {
-            if (!formData.name) {
-                throw new Error("Calendar name is required");
-            }
-            if (!formData.project) {
-                throw new Error("Project is required");
-            }
-            if (!formData.socialMediaEntry) {
-                throw new Error("Social Media Entry is required");
-            }
+            if (!formData.name) throw new Error("Calendar name is required");
+            if (!formData.client) throw new Error("Client is required");
+            if (!formData.project) throw new Error("Project is required");
+            if (!formData.platform) throw new Error("Platform is required");
 
-            await api.post("/calendars", {
+            const payload = {
                 name: formData.name,
+                client: formData.client,
                 project: formData.project,
-                socialMediaEntry: formData.socialMediaEntry,
-            });
+                platform: formData.platform,
+
+            };
+
+            if (isEditMode && editingCalendarId) {
+                await api.put(`/calendars/${editingCalendarId}`, payload);
+            } else {
+                await api.post("/calendars", payload);
+            }
 
             setIsModalOpen(false);
-            fetchCalendars(1, pagination.limit);
+            fetchCalendars(pagination.page, pagination.limit);
         } catch (error: unknown) {
             const err = error as { response?: { data?: { message?: string } }; message?: string };
-            setFormError(err.response?.data?.message || err.message || "Failed to create calendar");
+            setFormError(err.response?.data?.message || err.message || "Failed to save calendar");
         } finally {
             setFormLoading(false);
         }
@@ -176,6 +197,23 @@ export default function CalendarList() {
             console.error("Error toggling calendar:", error);
         }
     };
+
+    const filteredProjects = projects.filter(p => {
+        if (!formData.client) return false;
+        const pClientId = typeof p.client === 'string' ? p.client : p.client._id;
+        return pClientId === formData.client;
+    });
+
+    const platformOptions = [
+        { value: "facebook", label: "Facebook" },
+        { value: "instagram", label: "Instagram" },
+        { value: "linkedin", label: "LinkedIn" },
+        { value: "blogger", label: "Blogger" },
+        { value: "medium", label: "Medium" },
+        { value: "reddit", label: "Reddit" },
+        { value: "pinterest", label: "Pinterest" },
+        { value: "other", label: "Other" },
+    ];
 
     const filterOptions = [
         { value: "", label: "All Status" },
@@ -207,12 +245,11 @@ export default function CalendarList() {
             {/* Search and Filters */}
             <div className="mb-6 flex flex-wrap items-center gap-4">
                 <div className="flex-1 min-w-[200px]">
-                    <input
+                    <Input
                         type="text"
                         placeholder="Search calendars..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm outline-none focus:border-brand-500 dark:border-gray-700 dark:text-gray-300"
                     />
                 </div>
                 <Select
@@ -223,129 +260,58 @@ export default function CalendarList() {
                 />
             </div>
 
-            {/* Calendars Table */}
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-                <div className="max-w-full overflow-x-auto">
-                    <Table>
-                        <TableHeader className="border-b border-gray-100 dark:border-gray-800">
-                            <TableRow>
-                                <TableCell isHeader className="px-5 py-3 text-start text-sm font-medium text-gray-500 dark:text-gray-400">Name</TableCell>
-                                <TableCell isHeader className="px-5 py-3 text-start text-sm font-medium text-gray-500 dark:text-gray-400">Project</TableCell>
-                                <TableCell isHeader className="px-5 py-3 text-start text-sm font-medium text-gray-500 dark:text-gray-400">Platform</TableCell>
-                                <TableCell isHeader className="px-5 py-3 text-start text-sm font-medium text-gray-500 dark:text-gray-400">Status</TableCell>
-                                <TableCell isHeader className="px-5 py-3 text-start text-sm font-medium text-gray-500 dark:text-gray-400">Actions</TableCell>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-                            {loading ? (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="px-5 py-8 text-center text-gray-500">
-                                        Loading...
-                                    </TableCell>
-                                </TableRow>
-                            ) : calendars.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="px-5 py-8 text-center text-gray-500">
-                                        No calendars found. Click "Add Calendar" to create one.
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                calendars.map((calendar) => (
-                                    <TableRow key={calendar._id}>
-                                        <TableCell className="px-5 py-4">
-                                            <button
-                                                onClick={() => navigate(`/calendars/${calendar._id}`)}
-                                                className="font-medium text-brand-500 hover:text-brand-600"
-                                            >
-                                                {calendar.name}
-                                            </button>
-                                        </TableCell>
-                                        <TableCell className="px-5 py-4 text-gray-800 dark:text-gray-200">
-                                            {calendar.project?.name || "—"}
-                                        </TableCell>
-                                        <TableCell className="px-5 py-4">
-                                            <Badge size="sm" color="primary">
-                                                {calendar.socialMediaEntry?.platform || "—"}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="px-5 py-4">
-                                            <Badge
-                                                size="sm"
-                                                color={calendar.isActive ? "success" : "error"}
-                                            >
-                                                {calendar.isActive ? "Active" : "Inactive"}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="px-5 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <button
-                                                    onClick={() => navigate(`/calendars/${calendar._id}`)}
-                                                    className="text-sm text-gray-600 hover:text-brand-500 dark:text-gray-400"
-                                                >
-                                                    View
-                                                </button>
-                                                <button
-                                                    onClick={() => handleToggleActive(calendar._id)}
-                                                    className="text-sm text-brand-500 hover:text-brand-600"
-                                                >
-                                                    {calendar.isActive ? "Deactivate" : "Activate"}
-                                                </button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
+            {/* Calendars Grid */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {loading ? (
+                    <div className="col-span-full py-8 text-center text-gray-500">
+                        Loading...
+                    </div>
+                ) : calendars.length === 0 ? (
+                    <div className="col-span-full py-8 text-center text-gray-500">
+                        No calendars found. Click "Add Calendar" to create one.
+                    </div>
+                ) : (
+                    calendars.map((calendar) => (
+                        <CalendarCard
+                            key={calendar._id}
+                            calendar={calendar}
+                            onToggleActive={handleToggleActive}
+                            onEdit={openEditModal}
+                        />
+                    ))
+                )}
             </div>
 
             {/* Pagination */}
             {pagination.pages > 1 && (
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                        Showing {calendars.length} of {pagination.total} calendars
+                <div className="mt-8 flex justify-center gap-2">
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handlePageChange(pagination.page - 1)}
+                        disabled={pagination.page <= 1}
+                    >
+                        Previous
+                    </Button>
+                    <span className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        Page {pagination.page} of {pagination.pages}
                     </span>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handlePageChange(pagination.page - 1)}
-                            disabled={pagination.page <= 1}
-                        >
-                            Previous
-                        </Button>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                            Page {pagination.page} of {pagination.pages}
-                        </span>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handlePageChange(pagination.page + 1)}
-                            disabled={pagination.page >= pagination.pages}
-                        >
-                            Next
-                        </Button>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500 dark:text-gray-400">Go to:</span>
-                            <input
-                                type="number"
-                                min={1}
-                                max={pagination.pages}
-                                placeholder="#"
-                                className="w-16 rounded-lg border border-gray-300 bg-transparent px-3 py-1.5 text-sm outline-none focus:border-brand-500 dark:border-gray-700 dark:text-gray-300"
-                                onKeyDown={handleJumpToPage}
-                            />
-                        </div>
-                    </div>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handlePageChange(pagination.page + 1)}
+                        disabled={pagination.page >= pagination.pages}
+                    >
+                        Next
+                    </Button>
                 </div>
             )}
 
-            {/* Create Calendar Modal */}
+            {/* Create/Edit Calendar Modal */}
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-md w-full rounded-2xl p-0 overflow-hidden">
                 <div className="p-6 max-w-lg">
                     <h3 className="mb-4 text-lg font-semibold text-gray-800 dark:text-white">
-                        Create Calendar
+                        {isEditMode ? "Edit Calendar" : "Create Calendar"}
                     </h3>
 
                     {formError && (
@@ -363,28 +329,34 @@ export default function CalendarList() {
                             />
                         </div>
 
-
+                        <div>
+                            <Label>Client *</Label>
+                            <Select
+                                placeholder="Select Client"
+                                options={clients.map(c => ({ value: c._id, label: c.name }))}
+                                onChange={(value) => setFormData({ ...formData, client: value, project: "" })} // Reset project on client change
+                                defaultValue={formData.client}
+                            />
+                        </div>
 
                         <div>
                             <Label>Project *</Label>
                             <Select
                                 placeholder="Select Project"
-                                options={projects.map(p => ({ value: p._id, label: p.name }))}
+                                options={filteredProjects.map(p => ({ value: p._id, label: p.name }))}
                                 onChange={(value) => setFormData({ ...formData, project: value })}
                                 defaultValue={formData.project}
+                                disabled={!formData.client}
                             />
                         </div>
 
                         <div>
-                            <Label>Social Media Entry *</Label>
+                            <Label>Platform *</Label>
                             <Select
-                                placeholder="Select Social Media Entry"
-                                options={socialMediaEntries.map(e => ({
-                                    value: e._id,
-                                    label: `${e.platform} - ${e.description.substring(0, 30)}...`
-                                }))}
-                                onChange={(value) => setFormData({ ...formData, socialMediaEntry: value })}
-                                defaultValue={formData.socialMediaEntry}
+                                placeholder="Select Platform"
+                                options={platformOptions}
+                                onChange={(value) => setFormData({ ...formData, platform: value })}
+                                defaultValue={formData.platform}
                             />
                         </div>
 
@@ -397,7 +369,7 @@ export default function CalendarList() {
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={formLoading}>
-                                {formLoading ? "Creating..." : "Create Calendar"}
+                                {formLoading ? "Saving..." : (isEditMode ? "Update Calendar" : "Create Calendar")}
                             </Button>
                         </div>
                     </form>

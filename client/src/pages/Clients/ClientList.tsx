@@ -57,6 +57,17 @@ export default function ClientList() {
     const [formError, setFormError] = useState("");
     const [formLoading, setFormLoading] = useState(false);
 
+    // User Modal state
+    const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+    const [userFormData, setUserFormData] = useState({
+        name: "",
+        email: "",
+        password: "",
+    });
+    const [userFormError, setUserFormError] = useState("");
+    const [userFormLoading, setUserFormLoading] = useState(false);
+    const [selectedClientIdForUser, setSelectedClientIdForUser] = useState<string | null>(null);
+
     const fetchClients = async (page = 1, limit = 10) => {
         setLoading(true);
         try {
@@ -141,6 +152,35 @@ export default function ClientList() {
             setFormError(error.response?.data?.message || "An error occurred");
         } finally {
             setFormLoading(false);
+        }
+    };
+
+    const openCreateUserModal = (client: Client) => {
+        setSelectedClientIdForUser(client._id);
+        setUserFormData({ name: client.name, email: client.email, password: "" });
+        setUserFormError("");
+        setIsUserModalOpen(true);
+    };
+
+    const handleUserSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedClientIdForUser) return;
+
+        setUserFormLoading(true);
+        setUserFormError("");
+
+        try {
+            await api.post("/users", {
+                ...userFormData,
+                role: "client",
+                clientId: selectedClientIdForUser,
+            });
+            setIsUserModalOpen(false);
+            // Optional: show success message
+        } catch (error: any) {
+            setUserFormError(error.response?.data?.message || "An error occurred");
+        } finally {
+            setUserFormLoading(false);
         }
     };
 
@@ -259,6 +299,14 @@ export default function ClientList() {
                                                     {client.isActive ? "Deactivate" : "Activate"}
                                                 </button>
                                             </div>
+                                            <div className="mt-2">
+                                                <button
+                                                    onClick={() => openCreateUserModal(client)}
+                                                    className="text-xs text-blue-500 hover:text-blue-600 underline"
+                                                >
+                                                    Create Login
+                                                </button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -367,6 +415,59 @@ export default function ClientList() {
                             </Button>
                             <Button type="submit" disabled={formLoading}>
                                 {formLoading ? "Saving..." : editingClient ? "Update" : "Create"}
+                            </Button>
+                        </div>
+                    </form>
+                </div>
+            </Modal>
+
+            {/* Create User Modal */}
+            <Modal isOpen={isUserModalOpen} onClose={() => setIsUserModalOpen(false)}>
+                <div className="p-6">
+                    <h4 className="mb-6 text-lg font-semibold text-gray-800 dark:text-white">
+                        Create Client Login
+                    </h4>
+                    <form onSubmit={handleUserSubmit} className="space-y-4">
+                        {userFormError && (
+                            <Alert variant="error" title="Error" message={userFormError} />
+                        )}
+                        <div>
+                            <Label>Name *</Label>
+                            <Input
+                                type="text"
+                                value={userFormData.name}
+                                onChange={(e) => setUserFormData({ ...userFormData, name: e.target.value })}
+                                placeholder="Enter user name"
+                            />
+                        </div>
+                        <div>
+                            <Label>Email *</Label>
+                            <Input
+                                type="email"
+                                value={userFormData.email}
+                                onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
+                                placeholder="Enter login email"
+                            />
+                        </div>
+                        <div>
+                            <Label>Password *</Label>
+                            <Input
+                                type="password"
+                                value={userFormData.password}
+                                onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+                                placeholder="Enter temporary password"
+                            />
+                        </div>
+                        <div className="flex justify-end gap-3 pt-4">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsUserModalOpen(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button type="submit" disabled={userFormLoading}>
+                                {userFormLoading ? "Creating..." : "Create Login"}
                             </Button>
                         </div>
                     </form>

@@ -8,7 +8,7 @@ import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import clientRoutes from "./routes/clients.js";
 import projectRoutes from "./routes/projects.js";
-import socialMediaRoutes from "./routes/socialMedia.js";
+import postRoutes from "./routes/posts.js";
 import calendarRoutes from "./routes/calendars.js";
 import uploadRoutes from "./routes/upload.js"; // Import upload routes
 
@@ -31,7 +31,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/projects", projectRoutes);
-app.use("/api/social-media", socialMediaRoutes);
+app.use("/api/posts", postRoutes);
 app.use("/api/calendars", calendarRoutes);
 app.use("/api/upload", uploadRoutes); // Use upload routes
 

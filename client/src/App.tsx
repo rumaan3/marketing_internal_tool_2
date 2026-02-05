@@ -7,9 +7,10 @@ import Home from "./pages/Dashboard/Home";
 import StaffList from "./pages/Staff/StaffList";
 import ClientList from "./pages/Clients/ClientList";
 import ProjectList from "./pages/Projects/ProjectList";
-import SocialMediaList from "./pages/SocialMedia/SocialMediaList";
+import PostList from "./pages/Post/PostList";
 import CalendarList from "./pages/Calendars/CalendarList";
 import CalendarView from "./pages/Calendars/CalendarView";
+import ClientDashboard from "./pages/Dashboard/ClientDashboard";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -24,14 +25,17 @@ export default function App() {
                         <Route path="/signin" element={<SignIn />} />
 
                         {/* Dashboard Layout - Protected */}
+                        {/* Dashboard Layout - Protected */}
                         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                             <Route index path="/" element={<Home />} />
                             <Route path="/staff" element={<StaffList />} />
                             <Route path="/clients" element={<ClientList />} />
                             <Route path="/projects" element={<ProjectList />} />
-                            <Route path="/social-media" element={<SocialMediaList />} />
+                            <Route path="/posts" element={<PostList />} />
                             <Route path="/calendars" element={<CalendarList />} />
                             <Route path="/calendars/:id" element={<CalendarView />} />
+                            {/* Client Specific Route */}
+                            <Route path="/client/dashboard" element={<ClientDashboard />} />
                         </Route>
 
                         {/* Fallback Route */}

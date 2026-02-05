@@ -1,6 +1,7 @@
 import express from "express";
 import Client from "../models/Client.js";
 import { protect, restrictTo } from "../middleware/auth.js";
+import { encrypt } from "../utils/encryption.js";
 
 const router = express.Router();
 
@@ -58,10 +59,14 @@ router.get("/", async (req, res) => {
 // @access  Private
 router.get("/:id", async (req, res) => {
     try {
-        const client = await Client.findById(req.params.id).populate(
-            "createdBy",
-            "name email"
-        );
+        // Restrict access: Admins/Superusers OR the client themselves
+        if (req.user.role === "client" && req.user.clientId !== req.params.id) {
+            return res.status(403).json({ message: "Not authorized" });
+        }
+
+        const client = await Client.findById(req.params.id)
+            .populate("createdBy", "name email")
+            .select("-credentials.encryptedData -credentials.iv"); // Exclude sensitive encryption data
 
         if (!client) {
             return res.status(404).json({ message: "Client not found" });
@@ -143,5 +148,67 @@ router.patch(
         }
     }
 );
+
+// @route   POST /api/clients/credentials
+// @desc    Add or update client credentials
+// @access  Private (Client, Admin)
+router.post("/credentials", async (req, res) => {
+    try {
+        const { credentials, clientId } = req.body;
+
+        let targetClientId;
+
+        if (req.user.role === "client") {
+            targetClientId = req.user.clientId;
+        } else if (["superuser", "admin"].includes(req.user.role)) {
+            if (!clientId) {
+                return res.status(400).json({ message: "Client ID is required" });
+            }
+            targetClientId = clientId;
+        } else {
+            return res.status(403).json({ message: "Not authorized" });
+        }
+
+        const client = await Client.findById(targetClientId);
+        if (!client) {
+            return res.status(404).json({ message: "Client not found" });
+        }
+
+        // Process credentials
+        if (credentials && Array.isArray(credentials)) {
+            credentials.forEach((cred) => {
+                const { platform, password } = cred;
+                if (!platform || !password) return;
+
+                const { encryptedData, iv } = encrypt(password);
+
+                // Check if platform already exists
+                const existingIndex = client.credentials.findIndex(
+                    (c) => c.platform.toLowerCase() === platform.toLowerCase()
+                );
+
+                if (existingIndex > -1) {
+                    client.credentials[existingIndex] = {
+                        platform,
+                        encryptedData,
+                        iv,
+                    };
+                } else {
+                    client.credentials.push({
+                        platform,
+                        encryptedData,
+                        iv,
+                    });
+                }
+            });
+        }
+
+        await client.save();
+
+        res.json({ message: "Credentials updated successfully", credentials: client.credentials.map(c => ({ platform: c.platform })) });
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
 
 export default router;

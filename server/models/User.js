@@ -23,8 +23,13 @@ const userSchema = new mongoose.Schema(
         },
         role: {
             type: String,
-            enum: ["superuser", "admin", "staff"],
+            enum: ["superuser", "admin", "staff", "client"],
             default: "staff",
+        },
+        clientId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Client",
+            default: null,
         },
         isActive: {
             type: Boolean,

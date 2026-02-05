@@ -10,11 +10,18 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@react-jvectormap/core": "^1.0.4",
+        "@react-jvectormap/world": "^1.1.2",
+        "apexcharts": "^5.3.6",
         "axios": "^1.6.0",
         "clsx": "^2.1.1",
+        "flatpickr": "^4.6.13",
         "react": "^19.0.0",
+        "react-apexcharts": "^1.9.0",
         "react-dom": "^19.0.0",
+        "react-dropzone": "^14.4.0",
         "react-helmet-async": "^2.0.5",
+        "react-icons": "^5.5.0",
         "react-router": "^7.1.5",
         "tailwind-merge": "^3.0.1"
     },
@@ -22,6 +29,7 @@
         "@tailwindcss/postcss": "^4.0.8",
         "@types/react": "^19.0.12",
         "@types/react-dom": "^19.0.4",
+        "@types/react-dropzone": "^4.2.2",
         "@vitejs/plugin-react": "^4.3.4",
         "postcss": "^8.5.2",
         "tailwindcss": "^4.0.8",
