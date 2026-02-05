@@ -85,5 +85,4 @@ The application will be available at `http://localhost:5173`.
 | Admin | ✗ | ✓ | ✓ | ✓ |
 | Staff | ✗ | ✓ | ✓ | ✗ |
 
-## 📝 License
-This project is for internal use only.
+
